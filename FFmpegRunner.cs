@@ -5,12 +5,16 @@ class FFmpegRunner
 {
     private Process? _proc;
 
-    public void Start()
+    public event Action<string>? OutputReceived;
+    public event Action<string>? ErrorReceived;
+    public event Action<int>? ProcessExited;
+
+    public void Start(string command)
     {
         var psi = new ProcessStartInfo
         {
-            FileName = @"C:\Program Files\ffmpeg\bin\ffmpeg.exe",
-            Arguments = "-version",
+            FileName = @"C:\Program Files\ffmpeg\bin\ffmpeg.exe", // Hardcoded path to ffmpeg executable for testing
+            Arguments = command,
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -28,7 +32,8 @@ class FFmpegRunner
         {
             if (e.Data != null)
             {
-                System.Diagnostics.Debug.WriteLine("OUT: " + e.Data);
+                Debug.WriteLine("OUT: " + e.Data);
+                OutputReceived?.Invoke(e.Data);
             }
         };
 
@@ -36,15 +41,23 @@ class FFmpegRunner
         {
             if (e.Data != null)
             {
-                System.Diagnostics.Debug.WriteLine("ERR: " + e.Data);
+                Debug.WriteLine("ERR: " + e.Data);
+                ErrorReceived?.Invoke(e.Data);
             }
         };
 
         _proc.Exited += (sender, e) =>
         {
-            var proc = (Process)sender;
-            System.Diagnostics.Debug.WriteLine("Process finished with code " + proc.ExitCode);
-            proc.Dispose();
+            var proc = (Process?)sender;
+            if (proc == null)
+                return;
+            {
+                Debug.WriteLine("Process finished with code " + proc.ExitCode);
+                ProcessExited?.Invoke(proc.ExitCode);
+                proc.Dispose();
+                if (ReferenceEquals(_proc, proc))
+                    _proc = null;
+            }
         };
 
         _proc.Start();

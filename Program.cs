@@ -1,4 +1,4 @@
-namespace vConMpeg
+namespace VISpeg
 {
     internal static class Program
     {
